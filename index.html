@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#0b111b"><title>RoboShot 3D Lab — 역학과 에너지</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"></head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 35 12v16L20 37 5 28V12Z"/><path d="m5 12 15 9 15-9M20 21v16M13 16v-5h14v5"/></svg><span>RoboShot <small>3D LAB</small></span></a>
+    <nav aria-label="주 메뉴"><button class="nav-item active" id="lab-nav">시뮬레이션</button><button class="nav-item" id="experiment-open">오차 탐구 <span>100</span></button><button class="nav-item" id="theory-open">물리 모델</button></nav>
+    <div class="header-end"><span class="local-tag"><i></i> LOCAL ENGINE</span><button id="presentation" class="outline-button">⛶ <span>발표 모드</span></button></div>
+  </header>
+  <main>
+    <div class="page-heading"><div><h1>물리학 수행 발표용</h1></div><div class="model-tag"><i></i><div>이상적인 포물선 운동<small>중력 9.8 m/s² · 공기 저항 없음</small></div></div></div>
+    <div class="workspace">
+      <section class="viewport-card" aria-label="3D 농구 시뮬레이션">
+        <div class="viewport-top"><div><span class="live-dot"></span><strong>LIVE SIMULATION</strong><span class="scene-label">실내 슈팅 실험실</span></div><select id="quality" aria-label="그래픽 품질"><option value="high">고품질</option><option value="low">절전 품질</option></select></div>
+        <div id="scene"><div id="scene-loading">3D 실험실을 준비하고 있습니다…</div></div>
+        <div class="scene-overlay"><span class="scene-chip">ROBO / 01</span><span class="scene-chip" id="dimension-chip">림 높이 3.05 m · 거리 4.00 m</span></div>
+        <div id="shot-result" class="shot-result" aria-live="polite"><span id="result-label">READY</span><small id="result-detail">발사 조건을 조절한 뒤 슈팅을 시작하세요</small></div>
+        <div class="scene-axis"><b>Y</b> 높이 <span>↗</span> <b>X</b> 골대 방향 · <b>Z</b> 좌우</div>
+        <div class="camera-bar"><span>VIEW</span><button data-camera="overview" class="active">전체</button><button data-camera="side">측면</button><button data-camera="robot">로봇</button><button data-camera="hoop">골대</button><button id="camera-reset" title="카메라 초기화" aria-label="CAMERA RESET">↺</button><small>드래그 회전 · 휠 확대</small></div>
+        <div class="transport"><button id="shoot" class="primary-button"><span>↗</span> SHOOT <kbd>Space</kbd></button><button id="pause" class="outline-button" disabled>Ⅱ PAUSE</button><button id="reset" class="icon-button" title="초기 상태 복귀">↺ RESET</button><div class="timeline"><span id="time-progress"></span></div><span id="flight-clock">0.00 s</span></div>
+      </section>
+      <aside class="controls-card">
+        <div class="panel-title"><div><span class="eyebrow">SHOT CONFIGURATION</span><h2>발사 조건</h2></div><span class="panel-number">01</span></div>
+        <div class="segmented" role="group" aria-label="슈팅 모드"><button id="manual-mode" class="active">수동 설정</button><button id="auto-mode">자동 계산</button></div>
+        <fieldset id="conditions"><legend class="sr-only">발사 조건 입력</legend><div id="control-fields"></div></fieldset>
+        <div class="calculate-actions"><button id="auto-calculate">⌁ AUTO CALCULATE</button><button id="optimize">↗ OPTIMIZE</button></div>
+        <p id="input-message" class="input-message" role="status">50°에서 림 중심에 도달하는 이론 속력입니다.</p>
+        <div class="prediction"><div><span>예상 최고점</span><strong id="apex-height">—</strong></div><div><span>최고점 도달 시간</span><strong id="apex-time">—</strong></div><div><span>예상 림 통과</span><strong id="predicted-result">—</strong></div></div>
+        <p class="model-note"><span>ⓘ</span> 공 중심의 하강 통과로 판정합니다.<br>림·백보드 충돌은 재현하지 않습니다.</p>
+      </aside>
+    </div>
+    <section class="telemetry" aria-label="실시간 물리 수치">
+      <div class="telemetry-heading"><span class="live-dot"></span><span>실시간<br><b>TELEMETRY</b></span></div>
+      <div><span>수평 위치 <i>x</i></span><strong id="value-x">0.00<small>m</small></strong></div>
+      <div><span>높이 <i>y</i></span><strong id="value-height">2.00<small>m</small></strong></div>
+      <div><span>속력 <i>v</i></span><strong id="value-speed">7.14<small>m/s</small></strong></div>
+      <div><span>운동 에너지 <i>Eₖ</i></span><strong id="value-kinetic">15.31<small>J</small></strong></div>
+      <div><span>위치 에너지 <i>Eₚ</i></span><strong id="value-potential">11.76<small>J</small></strong></div>
+      <div class="total-energy"><span>전체 역학적 에너지</span><strong id="value-total">27.07<small>J</small></strong></div>
+    </section>
+    <section class="analysis-section"><div class="section-heading"><h2>물리 데이터 분석 <span>PHYSICS ANALYTICS</span></h2><p><span class="legend-line"></span> 이론 곡선 <span class="legend-cursor"></span> 현재 시점</p></div>
+      <div class="charts-grid">
+        <article class="chart-card" data-chart="height"><header><div><span class="chart-index">01</span><h3>높이 변화 <small>HEIGHT</small></h3></div><button class="expand-chart" data-expand="height" aria-label="높이 그래프 확대">⤢</button></header><div class="chart-wrap"><canvas id="chart-height" aria-label="시간에 따른 높이 그래프"></canvas></div></article>
+        <article class="chart-card" data-chart="speed"><header><div><span class="chart-index">02</span><h3>속력 변화 <small>SPEED</small></h3></div><button class="expand-chart" data-expand="speed" aria-label="속력 그래프 확대">⤢</button></header><div class="chart-wrap"><canvas id="chart-speed" aria-label="시간에 따른 속력 그래프"></canvas></div></article>
+        <article class="chart-card" data-chart="energy"><header><div><span class="chart-index">03</span><h3>에너지 전환 <small>TRANSFER</small></h3></div><button class="expand-chart" data-expand="energy" aria-label="에너지 그래프 확대">⤢</button></header><div class="chart-wrap"><canvas id="chart-energy" aria-label="시간에 따른 운동 위치 에너지 그래프"></canvas></div></article>
+        <article class="chart-card" data-chart="total"><header><div><span class="chart-index">04</span><h3>역학적 에너지 <small>CONSERVATION</small></h3></div><button class="expand-chart" data-expand="total" aria-label="전체 에너지 그래프 확대">⤢</button></header><div class="chart-wrap"><canvas id="chart-total" aria-label="시간에 따른 전체 에너지 그래프"></canvas></div></article>
+      </div>
+    </section>
+    <footer><span>ROBOSHOT 3D LAB <b>역학과 에너지 탐구</b></span><span>SI 단위계 · 이상화된 가상 실험 · <button id="model-info">모델의 가정과 한계 ↗</button></span></footer>
+  </main>
+  <dialog id="theory-dialog"><button class="dialog-close" aria-label="닫기">×</button><div class="eyebrow">THE PHYSICS BEHIND THE SHOT</div><h2>포물선 운동과 에너지 보존</h2><p>공기 저항과 회전을 무시하고, 공을 질점으로 취급하여 위치를 계산합니다. 크기는 골대 통과 판정에만 반영합니다.</p><div class="formula">x(t) = v₀ cosθ · t<br>y(t) = h + v₀ sinθ · t − ½gt²<br>vₓ = v₀ cosθ &nbsp; / &nbsp; vᵧ = v₀ sinθ − gt</div><p>θ는 내부에서 라디안으로 변환합니다. X는 골대 방향, Y는 높이, Z는 좌우이며 모든 길이는 m입니다.</p><div class="formula">v₀² = gd² / [2cos²θ · (d tanθ + h − H)]<br>θopt = 45° + ½ atan((H − h) / d)</div><p>OPTIMIZE는 <b>필요한 초기 속력의 최소화</b>입니다. 실제 농구에서 득점 확률이 가장 높은 각도라는 뜻이 아닙니다. 자동 계산한 낮은 각도에서는 상승 중 골대 높이에 도달하여 실패할 수 있습니다.</p><div class="formula">Eₖ = ½mv² &nbsp; Eₚ = mgy &nbsp; E = Eₖ + Eₚ</div><p>바닥을 위치 에너지의 기준으로 삼습니다. 비행 중 역학적 에너지는 일정하고, 공 중심이 높이 0.12 m에 도달하면 계산을 종료합니다. 충돌·바운스는 구현하지 않습니다.</p><p><b>통과 판정:</b> 공 중심이 3.05 m를 하강하며 통과할 때 림 중심과 수평 오차가 <b>0.225 − 0.120 = 0.105 m</b> 이하이면 SUCCESS입니다. 이는 3차원 림 충돌을 단순화한 판정입니다.</p><p class="muted">실제 토요타 CUE 로봇의 측정 데이터가 아닌 가상의 물리 모델입니다.</p></dialog>
+  <dialog id="experiment-dialog"><button class="dialog-close" aria-label="닫기">×</button><div class="eyebrow">REPRODUCIBLE EXPERIMENT</div><h2>작은 각도 오차, 달라지는 결과</h2><p>현재 발사 조건에서 각도만 균등 난수로 변화시켜 100회 가상 슈팅합니다. 속력은 유지합니다.</p><div class="experiment-controls"><label>각도 오차<select id="error-degrees"><option value="0.5">±0.5°</option><option value="1">±1°</option></select></label><label>난수 시드<input id="experiment-seed" type="number" min="0" max="4294967295" step="1" value="2026"></label><button id="run-experiment" class="primary-button">100회 실험 실행</button></div><div id="experiment-summary" class="experiment-summary">같은 조건과 시드는 같은 결과를 만듭니다.</div><div class="experiment-chart"><canvas id="chart-experiment"></canvas></div><p class="muted">이상화된 통과 판정의 성공률이며 실제 로봇의 측정 결과가 아닙니다.</p></dialog>
+  <div id="chart-backdrop" hidden></div><button id="close-chart" hidden>× 확대 닫기 <kbd>Esc</kbd></button>
+  <script type="module" src="/src/main.js"></script>
+</body></html>

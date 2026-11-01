@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.log
+
+# Portable desktop runtimes and generated local launchers are not web source.
+runtime/
+/npm.cmd
+
+# Local settings, secrets, backups, and packaged copies.
+.env
+.env.*
+!.env.example
+*.blend1
+*.blend2
+*.bak
+*.zip
+work/
+.DS_Store
+Thumbs.db

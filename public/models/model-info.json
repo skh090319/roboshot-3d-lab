@@ -1,0 +1,39 @@
+{
+  "generator": "Blender 5.2.2 LTS through Blender MCP",
+  "units": "metres",
+  "axes": {
+    "forward": "+X",
+    "up": "+Y"
+  },
+  "models": {
+    "robot": {
+      "bytes": 588844,
+      "meshes": 76,
+      "path": "robot.glb"
+    },
+    "court": {
+      "bytes": 1029908,
+      "meshes": 645,
+      "path": "court.glb"
+    },
+    "hoop": {
+      "bytes": 594624,
+      "meshes": 143,
+      "path": "hoop.glb"
+    }
+  },
+  "validation": {
+    "hoopCentre": [
+      0,
+      3.05,
+      0
+    ],
+    "rimInnerDiameter": 0.45,
+    "basketballRadius": 0.12,
+    "modelScale": 1,
+    "robotForward": "+X optical visor",
+    "animation": "Four quaternion shoulder/elbow channels authored in Blender, 1.5 seconds",
+    "readyPose": "Forward upper arms,77.35degree positive elbow flexion, upright forearms; no backward elbow bend"
+  },
+  "blendFile": "assets/RoboShot-3D-Lab.blend"
+}

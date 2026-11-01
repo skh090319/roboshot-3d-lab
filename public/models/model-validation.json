@@ -1,0 +1,68 @@
+{
+  "verifiedWith": "Three.js GLTFLoader",
+  "models": {
+    "robot": {
+      "bytes": 588844,
+      "bounds": {
+        "min": [
+          -0.24949999852105975,
+          0.02500000223517418,
+          -0.43070733628090163
+        ],
+        "max": [
+          0.4325175695605287,
+          1.969155190687892,
+          0.43070733628090163
+        ]
+      },
+      "animationTracks": 4,
+      "generator": "Khronos glTF Blender I/O v5.2.40"
+    },
+    "court": {
+      "bytes": 1029908,
+      "bounds": {
+        "min": [
+          -5.349999904632568,
+          -0.21000000089406967,
+          -7.099999904632568
+        ],
+        "max": [
+          12.150000095367432,
+          0.029000000562518835,
+          7.099999904632568
+        ]
+      },
+      "animationTracks": 0,
+      "generator": "Khronos glTF Blender I/O v5.2.40"
+    },
+    "hoop": {
+      "bytes": 594624,
+      "bounds": {
+        "min": [
+          -0.25,
+          0.009999981118979873,
+          -0.9174999762326479
+        ],
+        "max": [
+          2.1700000166893005,
+          4.0799999833106995,
+          0.9174999762326479
+        ]
+      },
+      "animationTracks": 0,
+      "generator": "Khronos glTF Blender I/O v5.2.40"
+    }
+  },
+  "validation": {
+    "rimCentre": [
+      0,
+      3.049999952316284,
+      0
+    ],
+    "rimInnerRadius": 0.22499998197045756,
+    "rimOuterRadius": 0.25000000862794974,
+    "robotAnimationRadiansChanged": 0.24999942789924784,
+    "animationResetReplayPasses": 2,
+    "axes": "X forward, Y up; one Blender metre equals one Three.js unit"
+  }
+}
