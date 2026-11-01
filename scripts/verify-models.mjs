@@ -55,6 +55,7 @@ function verifyContactGrip(model,label) {
   assert.equal(model.animations.reduce((n,clip)=>n+clip.tracks.length,0),8,'Four original arm tracks plus four contact-grip tracks');
   let maxAnchorSeparation=0,maxAnchorPathError=0,minHandSurfaceRadius=Infinity,minNormalDot=1,maxWristBendDegrees=0;
   const releaseAnchors=[];
+  const thumbChecks=[];
   for(const t of [0,.12,.2667,.325,.49,.65]) {
     localActions.forEach(action=>action.reset().play());localMixer.setTime(t);model.scene.updateMatrixWorld(true);
     const dip=t===.65?0:Math.sin(Math.PI*t/.65);
@@ -75,6 +76,20 @@ function verifyContactGrip(model,label) {
       const forearm=new THREE.Vector3(0,-1,0).transformDirection(model.scene.getObjectByName(`elbow_${side}`).matrixWorld);
       const handAlong=new THREE.Vector3(1,0,0).transformDirection(palm.matrixWorld);
       maxWristBendDegrees=Math.max(maxWristBendDegrees,THREE.MathUtils.radToDeg(forearm.angleTo(handAlong)));
+      if(t===0) {
+        let thumb;
+        palm.traverse(object=>{if(object.name.replaceAll(' ','_')===`Compact_opposed_thumb_${side}`)thumb=object;});
+        assert.ok(thumb,`${label}: each hand has its opposed thumb`);
+        const palmInverse=palm.matrixWorld.clone().invert(),localBounds=new THREE.Box3(),v=new THREE.Vector3();
+        const attribute=thumb.geometry.attributes.position;
+        for(let j=0;j<attribute.count;j++)localBounds.expandByPoint(v.fromBufferAttribute(attribute,j).applyMatrix4(thumb.matrixWorld).applyMatrix4(palmInverse));
+        const localCentre=localBounds.getCenter(new THREE.Vector3());
+        const thumbOffset=localCentre.clone().applyMatrix4(palm.matrixWorld).sub(position);
+        const anatomicalSide=side==='left'?-1:1;
+        assert.ok(localCentre.z*anatomicalSide>.025,`${label}: thumb is on the anatomical opposition side of the palm`);
+        assert.ok(thumbOffset.x<-.025,`${label}: thumbs face the robot/shooter, not the basket`);
+        thumbChecks.push({side,palmLocalAcross:localCentre.z,worldOffsetX:thumbOffset.x});
+      }
       palm.traverse(object=>{if(object.isMesh){const attribute=object.geometry.attributes.position,v=new THREE.Vector3();for(let j=0;j<attribute.count;j++)minHandSurfaceRadius=Math.min(minHandSurfaceRadius,v.fromBufferAttribute(attribute,j).applyMatrix4(object.matrixWorld).distanceTo(heldBall));}});
     }
   }
@@ -82,7 +97,7 @@ function verifyContactGrip(model,label) {
   assert.ok(maxAnchorPathError<.0005,`${label}: preparation follows the held-ball path`);
   assert.ok(minHandSurfaceRadius>=.1199,`${label}: fingers and pad do not penetrate the0.12m ball`);
   assert.ok(maxWristBendDegrees<60,`${label}: upright hand continues the forearm instead of a90degree bend`);
-  return {label,maxAnchorSeparation,maxAnchorPathError,minHandSurfaceRadius,minNormalDot,maxWristBendDegrees,releaseAnchors};
+  return {label,maxAnchorSeparation,maxAnchorPathError,minHandSurfaceRadius,minNormalDot,maxWristBendDegrees,releaseAnchors,thumbChecks};
 }
 const gripChecks=[verifyContactGrip(robot,'Blender GLB'),verifyContactGrip({scene:buildRobot(),animations:[robotAnimation()]},'Three.js fallback')];
 report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, gripChecks, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };

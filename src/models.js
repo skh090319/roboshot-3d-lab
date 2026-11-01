@@ -133,7 +133,8 @@ function shootingHand(elbow, side) {
     const tip = sphere(hand,.01,padCentre.toArray(),materials.grip,[.8,.35,.8]);
     tip.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),outward);
   }
-  const thumb = [[-.024,-side*.045],[-.006,-side*.064],[.015,-side*.073]].map(([x,z]) => [x,.145-Math.sqrt(.135**2-x*x-z*z),z]);
+  // Thumbs oppose the fingers on the shooter-facing side of each palm.
+  const thumb = [[-.024,side*.045],[-.006,side*.064],[.015,side*.073]].map(([x,z]) => [x,.145-Math.sqrt(.135**2-x*x-z*z),z]);
   digit(thumb, .0135, `Compact opposed thumb ${suffix}`);
   const marker = new THREE.Group(); marker.name = `palm_normal_${suffix}`; marker.position.y = .1; hand.add(marker);
   for (const [name,y] of [[`grip_contact_${suffix}`,.0245],[`grip_ball_center_${suffix}`,.145]]) {

@@ -6,7 +6,7 @@ import { buildRobot, buildCourt, buildHoop, buildBall, robotAnimation } from './
 import { createNeonTrajectory } from './trajectory.js';
 
 const base = import.meta.env.BASE_URL;
-const modelRevision = 'ball-contact-v5';
+const modelRevision = 'thumb-handedness-v6';
 export function createSimulation(host) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0c1721);

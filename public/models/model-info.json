@@ -34,7 +34,8 @@
     "robotForward": "+X optical visor",
     "animation": "8 tracks:4 arm quaternion,2 wrist position,2 wrist quaternion.60fps,1.5s; release at0.65s.",
     "readyPose": "Forward upper arms,77.35degree positive elbow flexion, upright forearms; no backward elbow bend",
-    "hands": "Upright contact grip. Concave palm surfaces follow the0.12m ball with0.5mm clearance; compact fingers wrap outside its surface."
+    "hands": "Upright contact grip. Concave palm surfaces follow the0.12m ball with0.5mm clearance; compact fingers wrap outside its surface.",
+    "thumbs": "Anatomically opposed thumbs use +side of the palm cross axis and point toward the shooter(-X); palm, fingers and8animation tracks unchanged."
   },
   "blendFile": "assets/RoboShot-3D-Lab.blend"
 }

@@ -204,7 +204,9 @@ def shooting_hand(elbow, side):
         pad_centre=Vector((0,.145,0))+outward*.124
         tip=sphere(hand,.01,pad_centre,'grip',(.8,.35,.8),'Finger tip pad '+suffix)
         tip.rotation_mode='QUATERNION';tip.rotation_quaternion=vec(outward).to_track_quat('Z','Y')
-    thumb=[(x,.145-math.sqrt(.135**2-x*x-z*z),z) for x,z in [(-.024,-side*.045),(-.006,-side*.064),(.015,-side*.073)]]
+    # Anatomical opposition: thumb is +side along along×normal, toward the
+    # robot/shooter in this two-handed grip, not toward the basket.
+    thumb=[(x,.145-math.sqrt(.135**2-x*x-z*z),z) for x,z in [(-.024,side*.045),(-.006,side*.064),(.015,side*.073)]]
     digit(thumb,.0135,'Compact opposed thumb '+suffix)
     marker=group('palm_normal_'+suffix,hand,(0,.10,0))
     marker['purpose']='Grip surface normal points toward the held ball'
