@@ -2,7 +2,7 @@
   "verifiedWith": "Three.js GLTFLoader",
   "models": {
     "robot": {
-      "bytes": 954796,
+      "bytes": 885884,
       "bounds": {
         "min": [
           -0.24949999852105975,
@@ -10,12 +10,12 @@
           -0.43070733628090163
         ],
         "max": [
-          0.4455568277326113,
-          1.9698825909788962,
+          0.5060280921429973,
+          2.061300031755078,
           0.43070733628090163
         ]
       },
-      "animationTracks": 4,
+      "animationTracks": 8,
       "generator": "Khronos glTF Blender I/O v5.2.40"
     },
     "court": {
@@ -61,54 +61,48 @@
     ],
     "rimInnerRadius": 0.22499998197045756,
     "rimOuterRadius": 0.25000000862794974,
-    "robotAnimationRadiansChanged": 0.24999942789924784,
+    "robotAnimationRadiansChanged": 0.2487784641743838,
     "animationResetReplayPasses": 2,
-    "wristChecks": [
+    "gripChecks": [
       {
-        "side": "left",
-        "requestedRollDegrees": 180,
-        "actualRotationDegrees": 179.99999485501834,
-        "axis": "forearm local -Y",
-        "pivot": [
-          0,
-          -0.2899998426437378,
-          0
-        ],
-        "uncompensated": true,
-        "centreInRobot": [
-          0.36081672621464245,
-          1.926087667961397,
-          -0.1441914636627709
-        ],
-        "actualPalmNormal": [
-          0.017335282592460255,
-          0.9985131301860527,
-          0.051681880997994915
-        ],
-        "dotToBallAfterRoll": 0.46800041019318195
+        "label": "Blender GLB",
+        "maxAnchorSeparation": 3.90117943505075e-7,
+        "maxAnchorPathError": 0.0001000263706029038,
+        "minHandSurfaceRadius": 0.12049988909158792,
+        "minNormalDot": 0.9999999999998943,
+        "maxWristBendDegrees": 42.65359725211316,
+        "releaseAnchors": [
+          [
+            0.4299999867593239,
+            2.0000000513566887,
+            -1.6258191268270217e-7
+          ],
+          [
+            0.4299999867593239,
+            2.0000000513566887,
+            1.6258191268270217e-7
+          ]
+        ]
       },
       {
-        "side": "right",
-        "requestedRollDegrees": 180,
-        "actualRotationDegrees": 179.99999532513837,
-        "axis": "forearm local -Y",
-        "pivot": [
-          0,
-          -0.2899998426437378,
-          0
-        ],
-        "uncompensated": true,
-        "centreInRobot": [
-          0.3608166719803877,
-          1.9260876805400833,
-          0.1441914349097156
-        ],
-        "actualPalmNormal": [
-          0.01733522716281409,
-          0.9985131301014897,
-          -0.05168190122411271
-        ],
-        "dotToBallAfterRoll": 0.4680003505130142
+        "label": "Three.js fallback",
+        "maxAnchorSeparation": 8.996819123030519e-7,
+        "maxAnchorPathError": 0.00009909477392801092,
+        "minHandSurfaceRadius": 0.12049964966524004,
+        "minNormalDot": 0.9999999999994379,
+        "maxWristBendDegrees": 42.65353084787752,
+        "releaseAnchors": [
+          [
+            0.43000003176233675,
+            2.0000000142823557,
+            1.4606217374479868e-8
+          ],
+          [
+            0.43000003176233675,
+            2.0000000142823557,
+            -1.4606217374479868e-8
+          ]
+        ]
       }
     ],
     "axes": "X forward, Y up; one Blender metre equals one Three.js unit"

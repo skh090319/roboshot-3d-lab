@@ -64,39 +64,60 @@ function rod(parent, a, b, radius, material) {
   return object;
 }
 
-function shootingHand(elbow, side) {
-  const suffix = side < 0 ? 'left' : 'right';
-  const centre = new THREE.Vector3(.395, 1.90, side * .095);
-  const normal = new THREE.Vector3(.43, 2, 0).sub(centre).normalize();
-  const along = new THREE.Vector3(1, 0, 0).addScaledVector(normal, -normal.x).normalize();
-  const across = new THREE.Vector3().crossVectors(along, normal).normalize();
+function armTransform(side, shoulderAngle = 1.65, elbowAngle = 1.35) {
   const parentQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -side * .40)
-    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.65));
+    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), shoulderAngle));
   const elbowPosition = new THREE.Vector3(0, -.31, 0).applyQuaternion(parentQ)
     .add(new THREE.Vector3(.01, 1.51, side * .29));
-  parentQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.35));
+  parentQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), elbowAngle));
+  return { parentQ, elbowPosition };
+}
+
+function contactFrame(side) {
+  const { parentQ, elbowPosition } = armTransform(side);
+  const normal = new THREE.Vector3(.12, .32, -side * .94).normalize();
+  const centre = new THREE.Vector3(.43, 2, 0).addScaledVector(normal, -.145);
+  const forearm = new THREE.Vector3(0, -1, 0).applyQuaternion(parentQ);
+  const along = forearm.clone().addScaledVector(normal, -forearm.dot(normal)).normalize();
+  const across = new THREE.Vector3().crossVectors(along, normal).normalize();
+  const quaternion = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(along, normal, across));
+  return { parentQ, elbowPosition, normal, centre, along, across, quaternion };
+}
+
+function shootingHand(elbow, side) {
+  const suffix = side < 0 ? 'left' : 'right';
+  const { parentQ, elbowPosition, centre, quaternion } = contactFrame(side);
   const inverse = parentQ.clone().invert();
-  const wristPosition = new THREE.Vector3(0, -.29, 0);
-  const wrist = new THREE.Group(); wrist.name = `wrist_roll_${suffix}`;
-  wrist.position.copy(wristPosition);
-  wrist.quaternion.setFromAxisAngle(new THREE.Vector3(0, -1, 0), Math.PI);
-  wrist.userData = { requestedRollDegrees: 180, rollAxis: 'Forearm local -Y' };
+  const wrist = new THREE.Group(); wrist.name = `wrist_grip_${suffix}`;
+  wrist.position.copy(centre).sub(elbowPosition).applyQuaternion(inverse);
+  wrist.quaternion.copy(inverse).multiply(quaternion);
   elbow.add(wrist);
   const hand = new THREE.Group(); hand.name = `palm_${suffix}`;
-  hand.position.copy(centre).sub(elbowPosition).applyQuaternion(inverse).sub(wristPosition);
-  hand.quaternion.copy(inverse).multiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(along, normal, across)));
   wrist.add(hand);
-  cylinder(elbow, .052, .065, [0, -.285, 0], materials.armor);
-  sphere(wrist, .045, [0, 0, 0], materials.dark);
-  const heel = centre.clone().addScaledVector(along, -.040).addScaledVector(normal, -.014)
-    .sub(elbowPosition).applyQuaternion(inverse).sub(wristPosition);
-  rod(wrist, [0, 0, 0], heel.toArray(), .034, materials.armor);
-  sphere(wrist, .034, heel.toArray(), materials.armor);
-  box(hand, [.083, .035, .096], [0, 0, 0], materials.dark, .013);
-  box(hand, [.070, .007, .082], [0, .021, 0], materials.grip, .003);
+  cylinder(elbow, .052, .100, [0, -.310, 0], materials.armor);
+  const joint = new THREE.Vector3(0, -.34, 0).applyQuaternion(parentQ).add(elbowPosition)
+    .sub(centre).applyQuaternion(quaternion.clone().invert());
+  sphere(wrist, .046, joint.toArray(), materials.dark);
+  rod(wrist, joint.toArray(), [-.040, -.014, 0], .033, materials.armor);
+  sphere(wrist, .033, [-.040, -.014, 0], materials.armor);
+  box(hand, [.083, .038, .096], [0, 0, 0], materials.dark, .013);
+  const count = 9, vertices = [], indices = [], n = count * count;
+  for (let layer = 0; layer < 2; layer++) for (let j = 0; j < count; j++) for (let i = 0; i < count; i++) {
+    const x = -.035 + .070 * i / (count - 1), z = -.041 + .082 * j / (count - 1);
+    const y = layer === 0 ? .145 - Math.sqrt(.1205 ** 2 - x * x - z * z) : .0185;
+    vertices.push(x, y, z);
+  }
+  const quad = (a,b,c,d) => indices.push(a,b,c,a,c,d);
+  for (let j = 0; j < count - 1; j++) for (let i = 0; i < count - 1; i++) {
+    const a = j * count + i, b = a + 1, c = a + count + 1, d = a + count;
+    quad(a,d,c,b); quad(a+n,b+n,c+n,d+n);
+  }
+  const perimeter = [...Array.from({length:count},(_,i)=>i), ...Array.from({length:count-1},(_,i)=>(i+1)*count+count-1), ...Array.from({length:count-1},(_,i)=>n-2-i), ...Array.from({length:count-2},(_,i)=>(count-2-i)*count)];
+  perimeter.forEach((a,i) => { const b = perimeter[(i+1)%perimeter.length]; quad(a,b,b+n,a+n); });
+  const padGeometry = new THREE.BufferGeometry(); padGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices,3)); padGeometry.setIndex(indices); padGeometry.computeVertexNormals();
+  mesh(hand,padGeometry,materials.grip).name = `Palm grip surface ${suffix}`;
   box(hand, [.070, .014, .080], [0, -.024, 0], materials.armor, .006);
   box(hand, [.021, .003, .015], [-.022, -.033, 0], materials.teal, .001);
-  for (let i = 0; i < 3; i++) box(hand, [.003, .0015, .060], [-.018 + i * .018, .0255, 0], materials.dark, .0005);
   function digit(points, radius, name) {
     const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
     const object = mesh(hand, new THREE.TubeGeometry(curve, 16, radius, 12, false), materials.armor);
@@ -105,11 +126,19 @@ function shootingHand(elbow, side) {
   }
   for (let f = 0; f < 4; f++) {
     const z = (f - 1.5) * .021;
-    digit([[.036, 0, z], [.060, .003, z], [.077, .014, z], [.082, .030, z]], .0105, `Compact finger ${suffix} ${f + 1}`);
-    sphere(hand, .012, [.078, .029, z], materials.grip, [.65, .35, .68]);
+    const points = [.034,.048,.064,.080].map(x => [x,.145-Math.sqrt(.132**2-x*x-z*z),z]);
+    digit(points, .0105, `Compact finger ${suffix} ${f + 1}`);
+    const outward = new THREE.Vector3(...points.at(-1)).sub(new THREE.Vector3(0,.145,0)).normalize();
+    const padCentre = new THREE.Vector3(0,.145,0).addScaledVector(outward,.124);
+    const tip = sphere(hand,.01,padCentre.toArray(),materials.grip,[.8,.35,.8]);
+    tip.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),outward);
   }
-  digit([[-.024, 0, -side * .045], [-.006, .009, -side * .063], [.015, .023, -side * .057]], .0135, `Compact opposed thumb ${suffix}`);
+  const thumb = [[-.024,-side*.045],[-.006,-side*.064],[.015,-side*.073]].map(([x,z]) => [x,.145-Math.sqrt(.135**2-x*x-z*z),z]);
+  digit(thumb, .0135, `Compact opposed thumb ${suffix}`);
   const marker = new THREE.Group(); marker.name = `palm_normal_${suffix}`; marker.position.y = .1; hand.add(marker);
+  for (const [name,y] of [[`grip_contact_${suffix}`,.0245],[`grip_ball_center_${suffix}`,.145]]) {
+    const anchor = new THREE.Group(); anchor.name = name; anchor.position.y = y; hand.add(anchor);
+  }
 }
 
 export function buildRobot() {
@@ -177,13 +206,31 @@ export function buildRobot() {
 
 export function robotAnimation() {
   const tracks = [];
-  const times = [0, .28, .65, .9, 1.15, 1.5];
+  const times = [0, 8/30, 19/30, .9, 34/30, 1.5];
+  const shoulderAngles = [1.65,1.40,1.65,2.18,2.35,2.32], elbowAngles = [1.35,1.50,1.35,.40,.15,.18];
+  function angleAt(values,t) {
+    let i=0; while(i<times.length-2 && t>times[i+1]) i++;
+    return THREE.MathUtils.lerp(values[i],values[i+1],THREE.MathUtils.clamp((t-times[i])/(times[i+1]-times[i]),0,1));
+  }
   for (const side of ['left', 'right']) {
     const quaternions = (angles, inward = 0) => angles.flatMap(angle => new THREE.Quaternion()
       .setFromAxisAngle(new THREE.Vector3(1, 0, 0), inward)
       .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle)).toArray());
     tracks.push(new THREE.QuaternionKeyframeTrack(`shoulder_${side}.quaternion`, times, quaternions([1.65, 1.40, 1.65, 2.18, 2.35, 2.32], side === 'left' ? .40 : -.40)));
     tracks.push(new THREE.QuaternionKeyframeTrack(`elbow_${side}.quaternion`, times, quaternions([1.35, 1.50, 1.35, .40, .15, .18])));
+    const sign = side === 'left' ? -1 : 1, ready = contactFrame(sign);
+    const sampleTimes=[], positions=[], rotations=[];
+    for(let frame=0;frame<=90;frame++) {
+      const t=frame/60, heldTime=Math.min(t,.65);
+      const { parentQ,elbowPosition } = armTransform(sign,angleAt(shoulderAngles,heldTime),angleAt(elbowAngles,heldTime));
+      const dip=heldTime>=.65?0:Math.sin(Math.PI*heldTime/.65);
+      const centre=ready.centre.clone().add(new THREE.Vector3(.03*dip,-.12*dip,0));
+      const inverse=parentQ.clone().invert();
+      sampleTimes.push(t);positions.push(...centre.sub(elbowPosition).applyQuaternion(inverse).toArray());
+      rotations.push(...inverse.multiply(ready.quaternion).toArray());
+    }
+    tracks.push(new THREE.VectorKeyframeTrack(`wrist_grip_${side}.position`,sampleTimes,positions));
+    tracks.push(new THREE.QuaternionKeyframeTrack(`wrist_grip_${side}.quaternion`,sampleTimes,rotations));
   }
   return new THREE.AnimationClip('RoboShot_Shooting', 1.5, tracks);
 }

@@ -111,7 +111,7 @@ tests/                 자동 물리 검증
 dist/                  빌드 후 생성되는 오프라인 실행 파일
 ```
 
-설치된 **Blender 5.2.2 LTS**를 공식 `mcp-for-blender 2.2.6` MCP 서버로 직접 조작해 모델을 만들었습니다. 원본은 `assets/RoboShot-3D-Lab.blend`, 제작 코드는 `scripts/build_blender_models.py`입니다. `public/models/robot.glb`, `court.glb`, `hoop.glb`를 Three.js GLTFLoader로 로드합니다. 어깨와 팔꿈치의 회전 4개 채널을 Blender 키프레임으로 내보냈으며, 물리적 공의 비행은 별도 해석식으로 제어합니다. 로봇은 선택한 발사 높이에 맞춰 시각적으로 비례 조절되며 농구공과 림 크기는 고정됩니다.
+설치된 **Blender 5.2.2 LTS**를 공식 `mcp-for-blender 2.2.6` MCP 서버로 직접 조작해 모델을 만들었습니다. 원본은 `assets/RoboShot-3D-Lab.blend`, 제작 코드는 `scripts/build_blender_models.py`입니다. `public/models/robot.glb`, `court.glb`, `hoop.glb`를 Three.js GLTFLoader로 로드합니다. 어깨·팔꿈치 회전과 양손 손목의 위치·회전을 합한 8개 채널을 Blender 키프레임으로 내보냅니다. 기본 높이 2 m의 준비 자세에서 오목한 손바닥과 굽은 손가락이 공의 곡면을 감쌉니다. 발사 전 공의 위치는 양손의 공 중심 표시점에 맞추고, 발사 후에는 별도 해석식으로 제어합니다. 로봇은 선택한 발사 높이에 맞춰 시각적으로 비례 조절되며 농구공과 림 크기는 고정됩니다.
 
 실제 GLB를 Three.js로 다시 읽어 림 높이 `3.049999952 m`, 내측 반지름 `0.224999982 m`, Y-up 방향, 미터 단위, 관절 움직임과 종료 후 반복 재생을 검증했습니다. `node scripts/verify-models.mjs`로 모델 검증을 다시 실행할 수 있습니다. GLB 3개의 합계 크기는 약 2.21 MB입니다. GLB 로딩이 불가능한 경우에만 절차적 Three.js 모델로 대체합니다.
 

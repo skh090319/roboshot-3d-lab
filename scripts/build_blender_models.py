@@ -23,9 +23,9 @@ scene = bpy.data.scenes.new('RoboShot 3D Lab - Original Models')
 bpy.context.window.scene = scene
 scene.unit_settings.system = 'METRIC'
 scene.unit_settings.scale_length = 1.0
-scene.render.fps = 30
+scene.render.fps = 60
 scene.frame_start = 1
-scene.frame_end = 46
+scene.frame_end = 91
 
 def vec(p):
     return Vector((p[0], -p[2], p[1]))
@@ -125,48 +125,59 @@ def rod(parent, a, b, radius, material='metal', name='Support'):
     return o
 
 def shooting_hand(elbow, side):
-    """Compact hand with the user's literal180deg roll about the forearm axis.
-
-    The previous palm-local transform is retained below the wrist pivot: there
-    is no compensating rotation that silently restores the previous orientation.
-    """
+    """An upright contact grip, with a spherical palm pad and curved fingers."""
     suffix='left' if side < 0 else 'right'
-    centre=Vector((.395,1.90,side*.095))
     ball=Vector((.43,2.0,0))  # Robot origin is X=-0.43 in the web scene.
-    normal=(ball-centre).normalized()
-    forward=Vector((1,0,0))
-    along=(forward-normal*forward.dot(normal)).normalized()
-    across=along.cross(normal).normalized()
-    # Frame written in Blender axes: our Y-up becomes local Blender Z-up.
-    basis=Matrix((vec(along),-vec(across),vec(normal))).transposed().to_4x4()
-    basis.translation=vec(centre)
+    normal=Vector((.12,.32,-side*.94)).normalized()
+    centre=ball-normal*.145
     shoulder_q=Quaternion((1,0,0),-side*.40) @ Quaternion((0,1,0),-1.65)
     elbow_q=Quaternion((0,1,0),-1.35)
     parent_ready=(Matrix.Translation(vec((.01,1.51,side*.29))) @ shoulder_q.to_matrix().to_4x4()
                   @ Matrix.Translation(vec((0,-.31,0))) @ elbow_q.to_matrix().to_4x4())
-    wrist_position=vec((0,-.29,0))
-    wrist=group('wrist_roll_'+suffix,elbow,(0,-.29,0))
+    direction=parent_ready.to_3x3() @ vec((0,-1,0))
+    forearm=Vector((direction.x,direction.z,-direction.y)).normalized()
+    along=(forearm-normal*forearm.dot(normal)).normalized()
+    across=along.cross(normal).normalized()
+    basis=Matrix((vec(along),-vec(across),vec(normal))).transposed().to_4x4()
+    basis.translation=vec(centre)
+    wrist=group('wrist_grip_'+suffix,elbow)
     wrist.rotation_mode='QUATERNION'
-    wrist.rotation_quaternion=Quaternion((0,0,-1),math.pi)
-    wrist['requestedRollDegrees']=180.0
-    wrist['rollAxis']='Forearm local -Y in glTF / local -Z in Blender'
+    wrist.matrix_local=parent_ready.inverted() @ basis
+    wrist['gripSide']=side
+    wrist['pose']='Upright tangent grip; replaces the previous fixed180degree roll'
     hand=group('palm_'+suffix,wrist)
-    hand.matrix_local=Matrix.Translation(-wrist_position) @ parent_ready.inverted() @ basis
     hand['gripSurface']='local +Y in glTF; dorsal armor is local -Y'
-    hand['orientationRevision']='Explicit forearm roll180deg, uncompensated'
-    # A short covered cuff and broad rounded heel replace the exposed thin link.
-    cylinder(elbow,.052,.065,(0,-.285,0),'armor','y','Wrist cuff '+suffix)
-    sphere(wrist,.045,(0,0,0),'dark',name='Wrist ball joint '+suffix)
-    heel=parent_ready.inverted() @ vec(centre-along*.040-normal*.014)-wrist_position
-    heel_local=(heel.x,heel.z,-heel.y)
-    rod(wrist,(0,0,0),heel_local,.034,'armor','Covered wrist heel '+suffix)
-    sphere(wrist,.034,heel_local,'armor',name='Rounded wrist heel '+suffix)
-    box(hand,(.083,.035,.096),(0,0,0),'dark',.013,'Palm frame '+suffix)
-    box(hand,(.070,.007,.082),(0,.021,0),'grip',.003,'Palm grip surface '+suffix)
+    hand['orientationRevision']='Contact grip v5, pad follows the ball surface'
+    cylinder(elbow,.052,.100,(0,-.310,0),'armor','y','Wrist cuff '+suffix)
+    wrist_in_hand=basis.inverted() @ (parent_ready @ vec((0,-.34,0)))
+    wrist_local=(wrist_in_hand.x,wrist_in_hand.z,-wrist_in_hand.y)
+    sphere(wrist,.046,wrist_local,'dark',name='Wrist ball joint '+suffix)
+    rod(wrist,wrist_local,(-.040,-.014,0),.033,'armor','Covered wrist heel '+suffix)
+    sphere(wrist,.033,(-.040,-.014,0),'armor',name='Rounded wrist heel '+suffix)
+    box(hand,(.083,.038,.096),(0,0,0),'dark',.013,'Palm frame '+suffix)
+    # Concave pad surface follows the actual0.12m ball with0.5mm clearance.
+    count=9;vertices=[];faces=[]
+    for layer in range(2):
+        for j in range(count):
+            z=-.041+.082*j/(count-1)
+            for i in range(count):
+                x=-.035+.070*i/(count-1)
+                y=.145-math.sqrt(.1205**2-x*x-z*z) if layer==0 else .0185
+                vertices.append(vec((x,y,z)))
+    n=count*count
+    for j in range(count-1):
+        for i in range(count-1):
+            a=j*count+i;b=a+1;c=a+count+1;d=a+count
+            faces.append((a,d,c,b));faces.append((a+n,b+n,c+n,d+n))
+    perimeter=list(range(count))+[j*count+count-1 for j in range(1,count)]+list(range(n-2,n-count-1,-1))+[j*count for j in range(count-2,0,-1)]
+    for i,a in enumerate(perimeter):
+        b=perimeter[(i+1)%len(perimeter)];faces.append((a,b,b+n,a+n))
+    data=bpy.data.meshes.new('Concave contact pad '+suffix);data.from_pydata(vertices,[],faces);data.update()
+    pad=bpy.data.objects.new('Palm grip surface '+suffix,data);scene.collection.objects.link(pad)
+    finish(pad,pad.name,hand,'grip',(0,0,0))
+    for polygon in data.polygons:polygon.use_smooth=True
     box(hand,(.070,.014,.080),(0,-.024,0),'armor',.006,'Dorsal hand armor '+suffix)
     box(hand,(.021,.003,.015),(-.022,-.033,0),'teal',.001,'Dorsal status light '+suffix)
-    for i in range(3):
-        box(hand,(.003,.0015,.060),(-.018+i*.018,.0255,0),'dark',.0005,'Palm traction groove '+suffix)
 
     def digit(points,radius,name,material='armor'):
         curve=bpy.data.curves.new(name+' profile','CURVE');curve.dimensions='3D'
@@ -187,14 +198,47 @@ def shooting_hand(elbow, side):
     # black hinge gaps or exposed cylindrical end faces.
     for f in range(4):
         z=(f-1.5)*.021
-        points=[(.036,0,z),(.060,.003,z),(.077,.014,z),(.082,.030,z)]
+        points=[(x,.145-math.sqrt(.132**2-x*x-z*z),z) for x in (.034,.048,.064,.080)]
         digit(points,.0105,'Compact finger '+suffix+' '+str(f+1))
-        sphere(hand,.012,(.078,.029,z),'grip',(.65,.35,.68),'Finger tip pad '+suffix)
-    thumb=[(-.024,0,-side*.045),(-.006,.009,-side*.063),(.015,.023,-side*.057)]
+        outward=(Vector(points[-1])-Vector((0,.145,0))).normalized()
+        pad_centre=Vector((0,.145,0))+outward*.124
+        tip=sphere(hand,.01,pad_centre,'grip',(.8,.35,.8),'Finger tip pad '+suffix)
+        tip.rotation_mode='QUATERNION';tip.rotation_quaternion=vec(outward).to_track_quat('Z','Y')
+    thumb=[(x,.145-math.sqrt(.135**2-x*x-z*z),z) for x,z in [(-.024,-side*.045),(-.006,-side*.064),(.015,-side*.073)]]
     digit(thumb,.0135,'Compact opposed thumb '+suffix)
     marker=group('palm_normal_'+suffix,hand,(0,.10,0))
-    marker['purpose']='Report the actual grip-normal direction after requested wrist roll'
-    return hand
+    marker['purpose']='Grip surface normal points toward the held ball'
+    group('grip_contact_'+suffix,hand,(0,.0245,0))
+    group('grip_ball_center_'+suffix,hand,(0,.145,0))
+    return wrist
+
+def animate_contact_grips(grips,root):
+    """Keep both hands on the same held ball during the0.65s preparation."""
+    scene.frame_set(1);bpy.context.view_layer.update()
+    ready_frames=[root.matrix_world.inverted() @ grip.matrix_world for grip in grips]
+    release={}
+    for frame in range(1,92):
+        scene.frame_set(frame);bpy.context.view_layer.update()
+        for grip,ready in zip(grips,ready_frames):
+            if frame<=40:
+                t=(frame-1)/60;dip=math.sin(math.pi*t/.65) if frame<40 else 0
+                target=ready.copy();target.translation+=vec((.03*dip,-.12*dip,0))
+                local=grip.parent.matrix_world.inverted() @ root.matrix_world @ target
+                grip.matrix_local=local
+                if frame==40:release[grip.name]=(grip.location.copy(),grip.rotation_quaternion.copy())
+            else:
+                grip.location,grip.rotation_quaternion=release[grip.name]
+            grip.keyframe_insert(data_path='location',frame=frame,group='Contact grip')
+            grip.keyframe_insert(data_path='rotation_quaternion',frame=frame,group='Contact grip')
+    for grip in grips:
+        action=grip.animation_data.action;action.name='RoboShot_Contact_'+grip.name
+        curves=list(getattr(action,'fcurves',[]))
+        for layer in getattr(action,'layers',[]):
+            for strip in layer.strips:
+                for bag in getattr(strip,'channelbags',[]):curves.extend(bag.fcurves)
+        for curve in curves:
+            for point in curve.keyframe_points:point.interpolation='LINEAR'
+    scene.frame_set(1)
 
 robot = group('RoboShot_Robot')
 robot['units'] = 'metres'
@@ -227,6 +271,7 @@ sphere(robot,.18,(.018,1.80,0),'armor',(.87,.92,1),'Helmet shell')
 box(robot,(.11,.105,.30),(.13,1.81,0),'lens',.023,'Sensor visor')
 box(robot,(.012,.016,.23),(.192,1.819,0),'teal',.004,'Vision scanning band')
 joints=[]
+grips=[]
 for side in (-1,1):
     suffix = 'left' if side < 0 else 'right'
     cylinder(robot,.057,.025,(.015,1.79,side*.173),'dark','z','Audio sensor housing')
@@ -244,19 +289,20 @@ for side in (-1,1):
     box(elbow,(.12,.24,.14),(0,-.155,0),'armor',.024,'Forearm shell')
     rod(elbow,(-.063,-.03,0),(-.063,-.25,0),.016,'metal','Forearm piston')
     box(elbow,(.012,.11,.045),(.07,-.15,0),'teal',.003,'Forearm light')
-    shooting_hand(elbow,side)
+    grips.append(shooting_hand(elbow,side))
     # Upper arms reach forward, with the elbow below the ball; positive elbow
     # flexion lifts the forearms. Extension reduces flexion without hyperextension.
     joints.extend([(shoulder,[1.65,1.40,1.65,2.18,2.35,2.32]),(elbow,[1.35,1.50,1.35,.40,.15,.18])])
 for joint, angles in joints:
     joint.rotation_mode='QUATERNION'
-    for frame, angle in zip((1,9,20,28,35,46),angles):
+    for frame, angle in zip((1,17,39,55,69,91),angles):
         inward = (-.40 if joint.name.endswith('right') else .40) if joint.name.startswith('shoulder') else 0
         joint.rotation_quaternion=Quaternion((1,0,0),inward) @ Quaternion((0,1,0),-angle)
         joint.keyframe_insert(data_path='rotation_quaternion', frame=frame, group='RoboShot Shooting')
     if joint.animation_data and joint.animation_data.action:
         joint.animation_data.action.name='RoboShot_Shooting_'+joint.name
 scene.frame_set(1)
+animate_contact_grips(grips,robot)
 
 court=group('RoboShot_Court')
 court['units']='metres'
@@ -339,6 +385,7 @@ for name,root in [('robot',robot),('court',court),('hoop',hoop)]:
         if 'ACTIVE_ACTIONS' in allowed:options['export_animation_mode']='ACTIVE_ACTIONS'
     if 'export_nla_strips' in keys:options['export_nla_strips']=False
     if 'export_force_sampling' in keys:options['export_force_sampling']=True
+    if 'export_anim_slide_to_zero' in keys:options['export_anim_slide_to_zero']=True
     bpy.ops.export_scene.gltf(**options)
     report['models'][name]={'bytes':os.path.getsize(filepath),'meshes':sum(o.type=='MESH' for o in descendants(root)),'path':name+'.glb'}
 

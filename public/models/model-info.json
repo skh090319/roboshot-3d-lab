@@ -7,8 +7,8 @@
   },
   "models": {
     "robot": {
-      "bytes": 954796,
-      "meshes": 114,
+      "bytes": 885884,
+      "meshes": 108,
       "path": "robot.glb"
     },
     "court": {
@@ -32,9 +32,9 @@
     "basketballRadius": 0.12,
     "modelScale": 1,
     "robotForward": "+X optical visor",
-    "animation": "Four quaternion shoulder/elbow channels authored in Blender, 1.5 seconds",
+    "animation": "8 tracks:4 arm quaternion,2 wrist position,2 wrist quaternion.60fps,1.5s; release at0.65s.",
     "readyPose": "Forward upper arms,77.35degree positive elbow flexion, upright forearms; no backward elbow bend",
-    "hands": "User requested exactly180degree forearm-axis wrist roll; applied without compensating palm rotation. Compact continuous fingers, rounded closed tips, integrated wrist cuff."
+    "hands": "Upright contact grip. Concave palm surfaces follow the0.12m ball with0.5mm clearance; compact fingers wrap outside its surface."
   },
   "blendFile": "assets/RoboShot-3D-Lab.blend"
 }

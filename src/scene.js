@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { buildRobot, buildCourt, buildHoop, buildBall } from './models.js';
+import { buildRobot, buildCourt, buildHoop, buildBall, robotAnimation } from './models.js';
 import { createNeonTrajectory } from './trajectory.js';
 
 const base = import.meta.env.BASE_URL;
-const modelRevision = 'wrist-roll-v4';
+const modelRevision = 'ball-contact-v5';
 export function createSimulation(host) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0c1721);
@@ -48,6 +48,16 @@ export function createSimulation(host) {
   let params = { height: 2, distance: 4 }, pose = 0, ballState = { x: 0, y: 2, z: 0, t: 0 };
   const loaded = { robot: false, court: false, hoop: false }, modelErrors = [];
   let robotMixer, shootingAction, shootingActions = [], currentPreset = 'overview', disposed = false;
+  let gripAnchors = ['left', 'right'].map(side => robot.getObjectByName(`grip_ball_center_${side}`));
+  const gripLeft = new THREE.Vector3(), gripRight = new THREE.Vector3();
+  function bindRobotAnimation(clips) {
+    robotMixer?.stopAllAction();
+    robotMixer = new THREE.AnimationMixer(robot);
+    shootingActions = clips.map(clip => robotMixer.clipAction(clip));
+    shootingActions.forEach(action => { action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play(); });
+    shootingAction = shootingActions[0];
+  }
+  bindRobotAnimation([robotAnimation()]);
 
   function basicBox(size, position, color, materialOptions = {}) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshStandardMaterial({ color, roughness: .85, ...materialOptions }));
@@ -117,6 +127,15 @@ export function createSimulation(host) {
     ball.position.set(state.x, Math.max(.12, state.y), state.z ?? 0);
     // Seam orientation remains fixed: rotation is excluded from the ideal mechanics model.
   }
+  function alignHeldBall() {
+    // Before release, use the Blender grip rather than a separate visual arc.
+    // After release, the analytical position supplied by setBallState owns the ball.
+    if (pose > 1 || !gripAnchors.every(Boolean)) return;
+    robot.updateMatrixWorld(true);
+    gripAnchors[0].getWorldPosition(gripLeft);
+    gripAnchors[1].getWorldPosition(gripRight);
+    ball.position.copy(gripLeft).add(gripRight).multiplyScalar(.5);
+  }
   function setShotPose(progress = 0) {
     pose = Math.max(0, Math.min(2, progress));
     if (pose <= 1) {
@@ -128,6 +147,7 @@ export function createSimulation(host) {
       // RESET and every subsequent shot reproduce exactly the same animation.
       shootingActions.forEach(action => { action.reset(); action.play(); });
       robotMixer.setTime(pose === 0 ? 0 : pose <= 1 ? pose * .65 : .65 + (pose - 1) * .65);
+      alignHeldBall();
       return;
     }
     const follow = THREE.MathUtils.smoothstep(pose - 1, 0, 1);
@@ -138,6 +158,7 @@ export function createSimulation(host) {
       if (shoulderJoint) shoulderJoint.rotation.z = shoulder;
       if (elbowJoint) elbowJoint.rotation.z = elbow;
     }
+    alignHeldBall();
   }
   function setTrajectory(samples) {
     if (trajectory) { scene.remove(trajectory); trajectory.traverse(object => object.geometry?.dispose()); }
@@ -204,17 +225,14 @@ export function createSimulation(host) {
       });
       if (name === 'robot') {
         stage.remove(robot); robot = gltf.scene; stage.add(robot);
-        if (gltf.animations.length) {
-          robotMixer = new THREE.AnimationMixer(robot);
-          shootingActions = gltf.animations.map(clip => robotMixer.clipAction(clip));
-          shootingActions.forEach(action => { action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play(); });
-          shootingAction = shootingActions[0];
-        }
+        gripAnchors = ['left', 'right'].map(side => robot.getObjectByName(`grip_ball_center_${side}`));
+        bindRobotAnimation(gltf.animations.length ? gltf.animations : [robotAnimation()]);
       }
       if (name === 'court') { stage.remove(court); court = batchStaticModel(gltf.scene); court.traverse(o => { o.castShadow = false; }); stage.add(court); }
       if (name === 'hoop') { stage.remove(hoop); hoop = batchStaticModel(gltf.scene); stage.add(hoop); }
       loaded[name] = true;
       const saved = ballState; setConditions(params); setBallState(saved);
+      if (pose <= 1) setShotPose(pose);
     } catch (error) {
       modelErrors.push(`${name}: ${error.message}`);
       // Procedural model already present, so a failed asset load cannot interrupt physics.

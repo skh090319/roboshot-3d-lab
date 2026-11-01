@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { buildRobot, robotAnimation } from '../src/models.js';
 
 const loader = new GLTFLoader();
 const models = {}, report = { verifiedWith: 'Three.js GLTFLoader', models: {} };
@@ -38,7 +39,7 @@ actions.forEach(action => { action.setLoop(THREE.LoopOnce, 1); action.clampWhenF
 function sample(time) {
   actions.forEach(action => { action.reset(); action.play(); });
   mixer.setTime(time);
-  return shoulder.quaternion.clone();
+  return shoulder.quaternion.clone().normalize();
 }
 const before = sample(0), after = sample(.30);
 assert.ok(before.angleTo(after) > .1, 'Blender shoulder animation moves in Three.js');
@@ -49,38 +50,42 @@ for (let repeat = 0; repeat < 2; repeat++) {
 }
 assert.ok(report.models.robot.bounds.max[1] > 1.8 && report.models.robot.bounds.max[1] < 2.1);
 assert.ok(report.models.court.bounds.max[1] < .1, 'Court lies in the XZ floor plane');
-sample(0); robot.scene.updateMatrixWorld(true);
-const wristChecks = [];
-const heldBall = new THREE.Vector3(.43, 2, 0); // Robot origin is placed at X=-0.43 in the web scene.
-for (const side of ['left', 'right']) {
-  const palm = robot.scene.getObjectByName(`palm_${side}`);
-  const marker = robot.scene.getObjectByName(`palm_normal_${side}`);
-  const wrist = robot.scene.getObjectByName(`wrist_roll_${side}`);
-  assert.ok(palm && marker && wrist, 'Hand, normal marker and explicit wrist roll pivot are exported');
-  const expectedRoll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, -1, 0), Math.PI);
-  assert.ok(wrist.quaternion.angleTo(expectedRoll) < 1e-5, 'Wrist has the requested exact180degree rotation around the forearm length axis');
-  assert.ok(wrist.position.distanceTo(new THREE.Vector3(0, -.29, 0)) < 1e-6, 'Wrist rotation uses the existing forearm-end pivot');
-  const unrolledMatrix = wrist.parent.matrixWorld.clone()
-    .multiply(new THREE.Matrix4().makeTranslation(...wrist.position.toArray())).multiply(palm.matrix);
-  const unrolledCentre = new THREE.Vector3().setFromMatrixPosition(unrolledMatrix);
-  const previousCentre = new THREE.Vector3(.395, 1.90, side === 'left' ? -.095 : .095);
-  assert.ok(unrolledCentre.distanceTo(previousCentre) < 1e-5, 'Child palm placement has not counteracted the requested wrist rotation');
-  const unrolledNormal = new THREE.Vector3(0, 1, 0).transformDirection(unrolledMatrix);
-  assert.ok(unrolledNormal.dot(heldBall.clone().sub(previousCentre).normalize()) > .999, 'Original pre-roll palm frame is preserved under the wrist pivot');
-  const originalQuaternion = new THREE.Quaternion().setFromRotationMatrix(unrolledMatrix);
-  const actualQuaternion = palm.getWorldQuaternion(new THREE.Quaternion());
-  const actualRotationDegrees = THREE.MathUtils.radToDeg(originalQuaternion.angleTo(actualQuaternion));
-  assert.ok(Math.abs(actualRotationDegrees - 180) < .001, 'Visible hand orientation actually changed180degrees without cancellation');
-  const position = palm.getWorldPosition(new THREE.Vector3());
-  const normal = marker.getWorldPosition(new THREE.Vector3()).sub(position).normalize();
-  const toBall = heldBall.clone().sub(position).normalize();
-  const dot = normal.dot(toBall);
-  // Report the real post-roll direction. A forced dot=1 would silently undo the
-  // user's explicit180degree wrist rotation, so it is no longer a requirement.
-  assert.ok(position.y < heldBall.y && heldBall.y - position.y < .13, 'Palm supports the ball from below');
-  wristChecks.push({ side, requestedRollDegrees: 180, actualRotationDegrees, axis: 'forearm local -Y', pivot: wrist.position.toArray(), uncompensated: true, centreInRobot: position.toArray(), actualPalmNormal: normal.toArray(), dotToBallAfterRoll: dot });
+function verifyContactGrip(model,label) {
+  const localMixer=new THREE.AnimationMixer(model.scene), localActions=model.animations.map(clip=>localMixer.clipAction(clip));
+  assert.equal(model.animations.reduce((n,clip)=>n+clip.tracks.length,0),8,'Four original arm tracks plus four contact-grip tracks');
+  let maxAnchorSeparation=0,maxAnchorPathError=0,minHandSurfaceRadius=Infinity,minNormalDot=1,maxWristBendDegrees=0;
+  const releaseAnchors=[];
+  for(const t of [0,.12,.2667,.325,.49,.65]) {
+    localActions.forEach(action=>action.reset().play());localMixer.setTime(t);model.scene.updateMatrixWorld(true);
+    const dip=t===.65?0:Math.sin(Math.PI*t/.65);
+    const expected=new THREE.Vector3(.43+.03*dip,2-.12*dip,0);
+    const anchors=['left','right'].map(side=>model.scene.getObjectByName(`grip_ball_center_${side}`).getWorldPosition(new THREE.Vector3()));
+    maxAnchorSeparation=Math.max(maxAnchorSeparation,anchors[0].distanceTo(anchors[1]));
+    const heldBall=anchors[0].clone().add(anchors[1]).multiplyScalar(.5);
+    for(let i=0;i<2;i++) {
+      const side=i===0?'left':'right',palm=model.scene.getObjectByName(`palm_${side}`);
+      const marker=model.scene.getObjectByName(`palm_normal_${side}`),contact=model.scene.getObjectByName(`grip_contact_${side}`);
+      const position=palm.getWorldPosition(new THREE.Vector3()),normal=marker.getWorldPosition(new THREE.Vector3()).sub(position).normalize();
+      const dot=normal.dot(heldBall.clone().sub(position).normalize());minNormalDot=Math.min(minNormalDot,dot);
+      const contactDistance=contact.getWorldPosition(new THREE.Vector3()).distanceTo(heldBall);
+      assert.ok(Math.abs(contactDistance-.12)<.005,`${label}: grip pad touches the ball within5mm`);
+      assert.ok(dot>.999,`${label}: grip normal faces the ball`);
+      maxAnchorPathError=Math.max(maxAnchorPathError,anchors[i].distanceTo(expected));
+      if(t===.65){assert.ok(anchors[i].distanceTo(new THREE.Vector3(.43,2,0))<1e-6,'Release at0.65s is exactly the physical release position');releaseAnchors.push(anchors[i].toArray());}
+      const forearm=new THREE.Vector3(0,-1,0).transformDirection(model.scene.getObjectByName(`elbow_${side}`).matrixWorld);
+      const handAlong=new THREE.Vector3(1,0,0).transformDirection(palm.matrixWorld);
+      maxWristBendDegrees=Math.max(maxWristBendDegrees,THREE.MathUtils.radToDeg(forearm.angleTo(handAlong)));
+      palm.traverse(object=>{if(object.isMesh){const attribute=object.geometry.attributes.position,v=new THREE.Vector3();for(let j=0;j<attribute.count;j++)minHandSurfaceRadius=Math.min(minHandSurfaceRadius,v.fromBufferAttribute(attribute,j).applyMatrix4(object.matrixWorld).distanceTo(heldBall));}});
+    }
+  }
+  assert.ok(maxAnchorSeparation<.0001,`${label}: both hands hold the same ball during preparation`);
+  assert.ok(maxAnchorPathError<.0005,`${label}: preparation follows the held-ball path`);
+  assert.ok(minHandSurfaceRadius>=.1199,`${label}: fingers and pad do not penetrate the0.12m ball`);
+  assert.ok(maxWristBendDegrees<60,`${label}: upright hand continues the forearm instead of a90degree bend`);
+  return {label,maxAnchorSeparation,maxAnchorPathError,minHandSurfaceRadius,minNormalDot,maxWristBendDegrees,releaseAnchors};
 }
-report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, wristChecks, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };
+const gripChecks=[verifyContactGrip(robot,'Blender GLB'),verifyContactGrip({scene:buildRobot(),animations:[robotAnimation()]},'Three.js fallback')];
+report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, gripChecks, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };
 await writeFile(new URL('../public/models/model-validation.json', import.meta.url), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
 console.log('PASS: Blender origin, metres, Y-up conversion, regulation rim and exported joint animation.');

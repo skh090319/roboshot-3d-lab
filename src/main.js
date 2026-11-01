@@ -60,7 +60,7 @@ function setPhase(next) {
 function reset() {
   elapsed = 0; windup = 0; verdictShown = false;
   setPhase('ready');
-  simulation?.setShotPose(0); simulation?.setBallState(stateAt(params, 0));
+  simulation?.setBallState(stateAt(params, 0)); simulation?.setShotPose(0);
   charts.setTime(0); updateTelemetry(stateAt(params, 0));
   showStatus('READY', '발사 조건을 조절한 뒤 슈팅을 시작하세요');
 }
