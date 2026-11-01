@@ -6,6 +6,7 @@ import { buildRobot, buildCourt, buildHoop, buildBall } from './models.js';
 import { createNeonTrajectory } from './trajectory.js';
 
 const base = import.meta.env.BASE_URL;
+const modelRevision = 'ready-pose-v2';
 export function createSimulation(host) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0c1721);
@@ -193,7 +194,7 @@ export function createSimulation(host) {
   }
   const ready = Promise.all(['robot', 'court', 'hoop'].map(async name => {
     try {
-      const gltf = await loader.loadAsync(`${base}models/${name}.glb`);
+      const gltf = await loader.loadAsync(`${base}models/${name}.glb?v=${modelRevision}`);
       if (disposed) return;
       gltf.scene.traverse(object => {
         if (object.isMesh) {
