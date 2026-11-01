@@ -1,0 +1,15 @@
+.scene-overlay{justify-content:flex-end}
+#theory-dialog{max-width:800px;max-height:90vh;scrollbar-width:thin;scrollbar-color:#3c5368 #14202e}
+#theory-content>p{line-height:1.9}
+.formula-card{padding:18px 20px;margin:22px 0 13px;background:#0c1724;border:1px solid #2a4054;border-radius:9px}
+.formula-card h3{margin:0 0 14px;color:#82dfcc;font-size:12px;font-weight:600;letter-spacing:.3px}
+.equation-row{display:grid;grid-template-columns:125px minmax(0,1fr);align-items:center;gap:15px;padding:13px 0}
+.equation-row+.equation-row{border-top:1px solid #1e3041}
+.equation-label{font:12px/1.6 'Segoe UI','Malgun Gothic',sans-serif;color:#a6bacd}
+.equation-body{min-width:0;overflow-x:auto;overflow-y:hidden;padding:8px 3px}
+.equation-body math{font-family:'Cambria Math','STIX Two Math',math;font-size:21px;color:#e0f0f5;math-style:normal;text-align:left;margin:0;width:max-content}
+.equation-body mtext{font:14px 'Segoe UI','Malgun Gothic',sans-serif;margin-left:8px}
+.equation-body small{display:block;margin-top:12px;color:#879db4;font-size:10px}
+#theory-content .symbol-guide{font-size:11px;color:#91a8bd;line-height:1.9}
+.symbol-guide b{color:#bfd7e5}
+@media(max-width:660px){.formula-card{padding:16px 14px}.equation-row{grid-template-columns:1fr;gap:5px;padding:12px 0}.equation-body math{font-size:19px}.equation-label{font-size:10px}.equation-body small{margin-top:8px}.formula-card h3{font-size:11px;margin-bottom:5px}}

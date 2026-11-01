@@ -14,6 +14,7 @@ const materials = {
   white: new THREE.MeshStandardMaterial({ color: 0xf2f3ed, roughness: .58, metalness: .18 }),
   dark: new THREE.MeshStandardMaterial({ color: 0x18272e, roughness: .37, metalness: .7 }),
   rubber: new THREE.MeshStandardMaterial({ color: 0x10191e, roughness: .8 }),
+  grip: new THREE.MeshStandardMaterial({ color: 0x253536, roughness: .93 }),
   metal: new THREE.MeshStandardMaterial({ color: 0x647e88, roughness: .27, metalness: .85 }),
   teal: new THREE.MeshStandardMaterial({ color: 0x36d9c8, roughness: .32, metalness: .4, emissive: 0x0a7f78, emissiveIntensity: .23 }),
   blue: new THREE.MeshStandardMaterial({ color: 0x164351, roughness: .55, metalness: .35 }),
@@ -61,6 +62,46 @@ function rod(parent, a, b, radius, material) {
   const object = cylinder(parent, radius, start.distanceTo(end), start.clone().add(end).multiplyScalar(.5).toArray(), material);
   object.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), end.sub(start).normalize());
   return object;
+}
+
+function shootingHand(elbow, side) {
+  const suffix = side < 0 ? 'left' : 'right';
+  const centre = new THREE.Vector3(.395, 1.90, side * .095);
+  const normal = new THREE.Vector3(.43, 2, 0).sub(centre).normalize();
+  const along = new THREE.Vector3(1, 0, 0).addScaledVector(normal, -normal.x).normalize();
+  const across = new THREE.Vector3().crossVectors(along, normal).normalize();
+  const parentQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -side * .40)
+    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.65));
+  const elbowPosition = new THREE.Vector3(0, -.31, 0).applyQuaternion(parentQ)
+    .add(new THREE.Vector3(.01, 1.51, side * .29));
+  parentQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.35));
+  const inverse = parentQ.clone().invert();
+  const hand = new THREE.Group(); hand.name = `palm_${suffix}`;
+  hand.position.copy(centre).sub(elbowPosition).applyQuaternion(inverse);
+  hand.quaternion.copy(inverse).multiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(along, normal, across)));
+  elbow.add(hand);
+  sphere(elbow, .048, [0, -.29, 0], materials.dark);
+  const heel = centre.clone().addScaledVector(along, -.045).addScaledVector(normal, -.018)
+    .sub(elbowPosition).applyQuaternion(inverse);
+  rod(elbow, [0, -.29, 0], heel.toArray(), .022, materials.metal);
+  box(hand, [.095, .032, .102], [0, 0, 0], materials.dark, .012);
+  box(hand, [.080, .010, .088], [0, .020, 0], materials.grip, .004);
+  box(hand, [.078, .012, .084], [0, -.024, 0], materials.armor, .005);
+  box(hand, [.025, .004, .018], [-.026, -.032, 0], materials.teal, .002);
+  for (let i = 0; i < 4; i++) box(hand, [.005, .002, .073], [-.026 + i * .017, .026, 0], materials.dark, .001);
+  for (let f = 0; f < 3; f++) {
+    const z = (f - 1) * .034;
+    const points = [[.045, 0, z], [.075, .010, z], [.095, .035, z], [.098, .060, z]];
+    for (let j = 0; j < 3; j++) {
+      rod(hand, points[j], points[j + 1], .011, materials.armor);
+      rod(hand, points[j].map((v,k) => v + (k === 1 ? .009 : 0)), points[j + 1].map((v,k) => v + (k === 1 ? .009 : 0)), .0055, materials.grip);
+    }
+    for (const point of points.slice(1, -1)) sphere(hand, .012, point, materials.dark);
+  }
+  const thumb = [[-.025, 0, -side * .050], [-.008, .020, -side * .072], [.017, .047, -side * .063]];
+  for (let j = 0; j < 2; j++) rod(hand, thumb[j], thumb[j + 1], .014, materials.armor);
+  sphere(hand, .013, thumb[2], materials.grip);
+  const marker = new THREE.Group(); marker.name = `palm_normal_${suffix}`; marker.position.y = .1; hand.add(marker);
 }
 
 export function buildRobot() {
@@ -118,12 +159,7 @@ export function buildRobot() {
     box(elbow, [.12, .24, .14], [0, -.155, 0], materials.armor, .025);
     rod(elbow, [-.063, -.03, 0], [-.063, -.25, 0], .016, materials.metal);
     box(elbow, [.012, .11, .045], [.07, -.15, 0], materials.teal);
-    sphere(elbow, .055, [0, -.29, 0], materials.dark);
-    box(elbow, [.085, .09, .115], [.018, -.35, 0], materials.dark, .015);
-    for (let f = 0; f < 3; f++) {
-      box(elbow, [.034, .07, .024], [.024, -.417, -.037 + f * .037], materials.armor, .006);
-    }
-    box(elbow, [.05, .035, .025], [.06, -.34, side * .07], materials.armor, .006);
+    shootingHand(elbow, side);
     shoulder.rotation.x = -side * .40;
     shoulder.rotation.z = 1.65;
     elbow.rotation.z = 1.35;

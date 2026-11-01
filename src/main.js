@@ -1,10 +1,13 @@
 import './style.css';
 import './styles-responsive.css';
+import './theory.css';
+import { renderTheory } from './theory.js';
 import { DEFAULTS, LIMITS, validateParams, requiredSpeed, optimizeShot, stateAt, apex, flightTime, evaluateShot, sampleTrajectory, runExperiment } from './physics.js';
 import { createSimulation } from './scene.js';
 import { createCharts, createExperimentChart } from './charts.js';
 
 const $ = (id) => document.getElementById(id);
+renderTheory($('theory-content'));
 let params = { ...DEFAULTS }, mode = 'manual', phase = 'ready', elapsed = 0, windup = 0, previousPhase = 'ready';
 let duration = flightTime(params), prediction = evaluateShot(params), verdictShown = false, expanded = null;
 const specs = [

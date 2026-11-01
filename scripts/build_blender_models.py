@@ -9,7 +9,7 @@ import bpy
 import math
 import json
 import os
-from mathutils import Vector, Quaternion
+from mathutils import Vector, Quaternion, Matrix
 
 if '__file__' not in globals():
     raise RuntimeError('Execute this saved authoring script with __file__ set (the MCP bridge does this automatically).')
@@ -62,6 +62,7 @@ M = {
     'white': mat('Porcelain marking', 'f2f3ed', .18, .58),
     'dark': mat('Graphite joint housing', '18272e', .7, .37),
     'rubber': mat('Rubber soles', '10191e', 0, .8),
+    'grip': mat('Palm grip elastomer', '253536', 0, .93),
     'metal': mat('Brushed steel', '647e88', .85, .27),
     'teal': mat('Optical cyan', '36d9c8', .4, .32, emissive=.2),
     'blue': mat('Deep teal casing', '164351', .35, .55),
@@ -123,6 +124,53 @@ def rod(parent, a, b, radius, material='metal', name='Support'):
     o.rotation_quaternion = (bv-av).to_track_quat('Z','Y')
     return o
 
+def shooting_hand(elbow, side):
+    """Cup the ball with the palmar surface; +local Y is the grip side in glTF."""
+    suffix='left' if side < 0 else 'right'
+    centre=Vector((.395,1.90,side*.095))
+    ball=Vector((.43,2.0,0))  # Robot origin is X=-0.43 in the web scene.
+    normal=(ball-centre).normalized()
+    forward=Vector((1,0,0))
+    along=(forward-normal*forward.dot(normal)).normalized()
+    across=along.cross(normal).normalized()
+    # Frame written in Blender axes: our Y-up becomes local Blender Z-up.
+    basis=Matrix((vec(along),-vec(across),vec(normal))).transposed().to_4x4()
+    basis.translation=vec(centre)
+    shoulder_q=Quaternion((1,0,0),-side*.40) @ Quaternion((0,1,0),-1.65)
+    elbow_q=Quaternion((0,1,0),-1.35)
+    parent_ready=(Matrix.Translation(vec((.01,1.51,side*.29))) @ shoulder_q.to_matrix().to_4x4()
+                  @ Matrix.Translation(vec((0,-.31,0))) @ elbow_q.to_matrix().to_4x4())
+    hand=group('palm_'+suffix,elbow)
+    hand.matrix_local=parent_ready.inverted() @ basis
+    hand['gripSurface']='local +Y in glTF; dorsal armor is local -Y'
+    hand['readyPalmNormalDotBall']=1.0
+    # Ball joint and narrow wrist link meet the heel of the palm, not its grip face.
+    sphere(elbow,.048,(0,-.29,0),'dark',name='Wrist ball joint '+suffix)
+    heel=parent_ready.inverted() @ vec(centre-along*.045-normal*.018)
+    rod(elbow,(0,-.29,0),(heel.x,heel.z,-heel.y),.022,'metal','Wrist link '+suffix)
+    box(hand,(.095,.032,.102),(0,0,0),'dark',.012,'Palm frame '+suffix)
+    box(hand,(.080,.010,.088),(0,.020,0),'grip',.004,'Palm grip surface '+suffix)
+    box(hand,(.078,.012,.084),(0,-.024,0),'armor',.005,'Dorsal hand armor '+suffix)
+    box(hand,(.025,.004,.018),(-.026,-.032,0),'teal',.002,'Dorsal status light '+suffix)
+    for i in range(4):
+        box(hand,(.005,.002,.073),(-.026+i*.017,.026,0),'dark',.001,'Palm traction rib '+suffix)
+    # Finger joints curve toward +Y, the same side as the palm cushion.
+    for f in range(3):
+        z=(f-1)*.034
+        points=[(.045,0,z),(.075,.010,z),(.095,.035,z),(.098,.060,z)]
+        for j in range(3):
+            rod(hand,points[j],points[j+1],.011,'armor','Finger shell '+suffix)
+            a,b=points[j],points[j+1]
+            rod(hand,(a[0],a[1]+.009,a[2]),(b[0],b[1]+.009,b[2]),.0055,'grip','Finger grip '+suffix)
+        for p in points[1:-1]:sphere(hand,.012,p,'dark',name='Finger hinge '+suffix)
+    thumb=[(-.025,0,-side*.050),(-.008,.020,-side*.072),(.017,.047,-side*.063)]
+    for j in range(2):
+        rod(hand,thumb[j],thumb[j+1],.014,'armor','Opposed thumb '+suffix)
+    sphere(hand,.013,thumb[-1],'grip',name='Thumb cushion '+suffix)
+    marker=group('palm_normal_'+suffix,hand,(0,.10,0))
+    marker['purpose']='Palm outward-normal verification marker'
+    return hand
+
 robot = group('RoboShot_Robot')
 robot['units'] = 'metres'
 robot['forward'] = '+X'
@@ -171,11 +219,7 @@ for side in (-1,1):
     box(elbow,(.12,.24,.14),(0,-.155,0),'armor',.024,'Forearm shell')
     rod(elbow,(-.063,-.03,0),(-.063,-.25,0),.016,'metal','Forearm piston')
     box(elbow,(.012,.11,.045),(.07,-.15,0),'teal',.003,'Forearm light')
-    sphere(elbow,.055,(0,-.29,0),'dark')
-    box(elbow,(.085,.09,.115),(.018,-.35,0),'dark',.012,'Palm')
-    for f in range(3):
-        box(elbow,(.034,.07,.024),(.024,-.417,-.037+f*.037),'armor',.006,'Finger phalange')
-    box(elbow,(.05,.035,.025),(.06,-.34,side*.07),'armor',.006,'Opposable thumb')
+    shooting_hand(elbow,side)
     # Upper arms reach forward, with the elbow below the ball; positive elbow
     # flexion lifts the forearms. Extension reduces flexion without hyperextension.
     joints.extend([(shoulder,[1.65,1.40,1.65,2.18,2.35,2.32]),(elbow,[1.35,1.50,1.35,.40,.15,.18])])

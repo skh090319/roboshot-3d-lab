@@ -2,7 +2,7 @@
   "verifiedWith": "Three.js GLTFLoader",
   "models": {
     "robot": {
-      "bytes": 588844,
+      "bytes": 963444,
       "bounds": {
         "min": [
           -0.24949999852105975,
@@ -10,8 +10,8 @@
           -0.43070733628090163
         ],
         "max": [
-          0.4325175695605287,
-          1.969155190687892,
+          0.5150106602627982,
+          1.9655999619007112,
           0.43070733628090163
         ]
       },
@@ -63,6 +63,36 @@
     "rimOuterRadius": 0.25000000862794974,
     "robotAnimationRadiansChanged": 0.24999942789924784,
     "animationResetReplayPasses": 2,
+    "palmChecks": [
+      {
+        "side": "left",
+        "centreInRobot": [
+          0.3949999101926932,
+          1.899999740556582,
+          -0.09500011564501096
+        ],
+        "normalTowardBall": [
+          0.2459550151675266,
+          0.7027284704564782,
+          0.6675918119059283
+        ],
+        "dotToBall": 0.9999999999998751
+      },
+      {
+        "side": "right",
+        "centreInRobot": [
+          0.3949999101926932,
+          1.899999740556582,
+          0.09500011564501096
+        ],
+        "normalTowardBall": [
+          0.2459550151675266,
+          0.7027284704564782,
+          -0.6675918119059283
+        ],
+        "dotToBall": 0.9999999999998751
+      }
+    ],
     "axes": "X forward, Y up; one Blender metre equals one Three.js unit"
   }
 }

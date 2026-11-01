@@ -49,7 +49,22 @@ for (let repeat = 0; repeat < 2; repeat++) {
 }
 assert.ok(report.models.robot.bounds.max[1] > 1.8 && report.models.robot.bounds.max[1] < 2.1);
 assert.ok(report.models.court.bounds.max[1] < .1, 'Court lies in the XZ floor plane');
-report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };
+sample(0); robot.scene.updateMatrixWorld(true);
+const palmChecks = [];
+const heldBall = new THREE.Vector3(.43, 2, 0); // Robot origin is placed at X=-0.43 in the web scene.
+for (const side of ['left', 'right']) {
+  const palm = robot.scene.getObjectByName(`palm_${side}`);
+  const marker = robot.scene.getObjectByName(`palm_normal_${side}`);
+  assert.ok(palm && marker, 'Palm frame and grip-normal marker are exported');
+  const position = palm.getWorldPosition(new THREE.Vector3());
+  const normal = marker.getWorldPosition(new THREE.Vector3()).sub(position).normalize();
+  const toBall = heldBall.clone().sub(position).normalize();
+  const dot = normal.dot(toBall);
+  assert.ok(dot > .99, 'Palmar grip surface faces the ball, never the back of the hand');
+  assert.ok(position.y < heldBall.y && heldBall.y - position.y < .13, 'Palm supports the ball from below');
+  palmChecks.push({ side, centreInRobot: position.toArray(), normalTowardBall: normal.toArray(), dotToBall: dot });
+}
+report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, palmChecks, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };
 await writeFile(new URL('../public/models/model-validation.json', import.meta.url), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
 console.log('PASS: Blender origin, metres, Y-up conversion, regulation rim and exported joint animation.');
