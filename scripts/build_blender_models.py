@@ -125,7 +125,11 @@ def rod(parent, a, b, radius, material='metal', name='Support'):
     return o
 
 def shooting_hand(elbow, side):
-    """Cup the ball with the palmar surface; +local Y is the grip side in glTF."""
+    """Compact hand with the user's literal180deg roll about the forearm axis.
+
+    The previous palm-local transform is retained below the wrist pivot: there
+    is no compensating rotation that silently restores the previous orientation.
+    """
     suffix='left' if side < 0 else 'right'
     centre=Vector((.395,1.90,side*.095))
     ball=Vector((.43,2.0,0))  # Robot origin is X=-0.43 in the web scene.
@@ -140,35 +144,56 @@ def shooting_hand(elbow, side):
     elbow_q=Quaternion((0,1,0),-1.35)
     parent_ready=(Matrix.Translation(vec((.01,1.51,side*.29))) @ shoulder_q.to_matrix().to_4x4()
                   @ Matrix.Translation(vec((0,-.31,0))) @ elbow_q.to_matrix().to_4x4())
-    hand=group('palm_'+suffix,elbow)
-    hand.matrix_local=parent_ready.inverted() @ basis
+    wrist_position=vec((0,-.29,0))
+    wrist=group('wrist_roll_'+suffix,elbow,(0,-.29,0))
+    wrist.rotation_mode='QUATERNION'
+    wrist.rotation_quaternion=Quaternion((0,0,-1),math.pi)
+    wrist['requestedRollDegrees']=180.0
+    wrist['rollAxis']='Forearm local -Y in glTF / local -Z in Blender'
+    hand=group('palm_'+suffix,wrist)
+    hand.matrix_local=Matrix.Translation(-wrist_position) @ parent_ready.inverted() @ basis
     hand['gripSurface']='local +Y in glTF; dorsal armor is local -Y'
-    hand['readyPalmNormalDotBall']=1.0
-    # Ball joint and narrow wrist link meet the heel of the palm, not its grip face.
-    sphere(elbow,.048,(0,-.29,0),'dark',name='Wrist ball joint '+suffix)
-    heel=parent_ready.inverted() @ vec(centre-along*.045-normal*.018)
-    rod(elbow,(0,-.29,0),(heel.x,heel.z,-heel.y),.022,'metal','Wrist link '+suffix)
-    box(hand,(.095,.032,.102),(0,0,0),'dark',.012,'Palm frame '+suffix)
-    box(hand,(.080,.010,.088),(0,.020,0),'grip',.004,'Palm grip surface '+suffix)
-    box(hand,(.078,.012,.084),(0,-.024,0),'armor',.005,'Dorsal hand armor '+suffix)
-    box(hand,(.025,.004,.018),(-.026,-.032,0),'teal',.002,'Dorsal status light '+suffix)
-    for i in range(4):
-        box(hand,(.005,.002,.073),(-.026+i*.017,.026,0),'dark',.001,'Palm traction rib '+suffix)
-    # Finger joints curve toward +Y, the same side as the palm cushion.
-    for f in range(3):
-        z=(f-1)*.034
-        points=[(.045,0,z),(.075,.010,z),(.095,.035,z),(.098,.060,z)]
-        for j in range(3):
-            rod(hand,points[j],points[j+1],.011,'armor','Finger shell '+suffix)
-            a,b=points[j],points[j+1]
-            rod(hand,(a[0],a[1]+.009,a[2]),(b[0],b[1]+.009,b[2]),.0055,'grip','Finger grip '+suffix)
-        for p in points[1:-1]:sphere(hand,.012,p,'dark',name='Finger hinge '+suffix)
-    thumb=[(-.025,0,-side*.050),(-.008,.020,-side*.072),(.017,.047,-side*.063)]
-    for j in range(2):
-        rod(hand,thumb[j],thumb[j+1],.014,'armor','Opposed thumb '+suffix)
-    sphere(hand,.013,thumb[-1],'grip',name='Thumb cushion '+suffix)
+    hand['orientationRevision']='Explicit forearm roll180deg, uncompensated'
+    # A short covered cuff and broad rounded heel replace the exposed thin link.
+    cylinder(elbow,.052,.065,(0,-.285,0),'armor','y','Wrist cuff '+suffix)
+    sphere(wrist,.045,(0,0,0),'dark',name='Wrist ball joint '+suffix)
+    heel=parent_ready.inverted() @ vec(centre-along*.040-normal*.014)-wrist_position
+    heel_local=(heel.x,heel.z,-heel.y)
+    rod(wrist,(0,0,0),heel_local,.034,'armor','Covered wrist heel '+suffix)
+    sphere(wrist,.034,heel_local,'armor',name='Rounded wrist heel '+suffix)
+    box(hand,(.083,.035,.096),(0,0,0),'dark',.013,'Palm frame '+suffix)
+    box(hand,(.070,.007,.082),(0,.021,0),'grip',.003,'Palm grip surface '+suffix)
+    box(hand,(.070,.014,.080),(0,-.024,0),'armor',.006,'Dorsal hand armor '+suffix)
+    box(hand,(.021,.003,.015),(-.022,-.033,0),'teal',.001,'Dorsal status light '+suffix)
+    for i in range(3):
+        box(hand,(.003,.0015,.060),(-.018+i*.018,.0255,0),'dark',.0005,'Palm traction groove '+suffix)
+
+    def digit(points,radius,name,material='armor'):
+        curve=bpy.data.curves.new(name+' profile','CURVE');curve.dimensions='3D'
+        curve.resolution_u=5;curve.bevel_depth=radius;curve.bevel_resolution=3;curve.use_fill_caps=True
+        spline=curve.splines.new('BEZIER');spline.bezier_points.add(len(points)-1)
+        for point,coordinate in zip(spline.bezier_points,points):
+            point.co=vec(coordinate);point.handle_left_type='AUTO';point.handle_right_type='AUTO'
+        temporary=bpy.data.objects.new(name+' profile',curve);scene.collection.objects.link(temporary)
+        evaluated=temporary.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        data=bpy.data.meshes.new_from_object(evaluated)
+        obj=bpy.data.objects.new(name,data);scene.collection.objects.link(obj)
+        finish(obj,name,hand,material,(0,0,0))
+        for polygon in data.polygons:polygon.use_smooth=True
+        bpy.data.objects.remove(temporary,do_unlink=True);bpy.data.curves.remove(curve)
+        sphere(hand,radius,points[-1],material,name=name+' rounded tip')
+
+    # Four shorter continuous fingers have closed rounded tips, without loose
+    # black hinge gaps or exposed cylindrical end faces.
+    for f in range(4):
+        z=(f-1.5)*.021
+        points=[(.036,0,z),(.060,.003,z),(.077,.014,z),(.082,.030,z)]
+        digit(points,.0105,'Compact finger '+suffix+' '+str(f+1))
+        sphere(hand,.012,(.078,.029,z),'grip',(.65,.35,.68),'Finger tip pad '+suffix)
+    thumb=[(-.024,0,-side*.045),(-.006,.009,-side*.063),(.015,.023,-side*.057)]
+    digit(thumb,.0135,'Compact opposed thumb '+suffix)
     marker=group('palm_normal_'+suffix,hand,(0,.10,0))
-    marker['purpose']='Palm outward-normal verification marker'
+    marker['purpose']='Report the actual grip-normal direction after requested wrist roll'
     return hand
 
 robot = group('RoboShot_Robot')

@@ -76,31 +76,39 @@ function shootingHand(elbow, side) {
     .add(new THREE.Vector3(.01, 1.51, side * .29));
   parentQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.35));
   const inverse = parentQ.clone().invert();
+  const wristPosition = new THREE.Vector3(0, -.29, 0);
+  const wrist = new THREE.Group(); wrist.name = `wrist_roll_${suffix}`;
+  wrist.position.copy(wristPosition);
+  wrist.quaternion.setFromAxisAngle(new THREE.Vector3(0, -1, 0), Math.PI);
+  wrist.userData = { requestedRollDegrees: 180, rollAxis: 'Forearm local -Y' };
+  elbow.add(wrist);
   const hand = new THREE.Group(); hand.name = `palm_${suffix}`;
-  hand.position.copy(centre).sub(elbowPosition).applyQuaternion(inverse);
+  hand.position.copy(centre).sub(elbowPosition).applyQuaternion(inverse).sub(wristPosition);
   hand.quaternion.copy(inverse).multiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(along, normal, across)));
-  elbow.add(hand);
-  sphere(elbow, .048, [0, -.29, 0], materials.dark);
-  const heel = centre.clone().addScaledVector(along, -.045).addScaledVector(normal, -.018)
-    .sub(elbowPosition).applyQuaternion(inverse);
-  rod(elbow, [0, -.29, 0], heel.toArray(), .022, materials.metal);
-  box(hand, [.095, .032, .102], [0, 0, 0], materials.dark, .012);
-  box(hand, [.080, .010, .088], [0, .020, 0], materials.grip, .004);
-  box(hand, [.078, .012, .084], [0, -.024, 0], materials.armor, .005);
-  box(hand, [.025, .004, .018], [-.026, -.032, 0], materials.teal, .002);
-  for (let i = 0; i < 4; i++) box(hand, [.005, .002, .073], [-.026 + i * .017, .026, 0], materials.dark, .001);
-  for (let f = 0; f < 3; f++) {
-    const z = (f - 1) * .034;
-    const points = [[.045, 0, z], [.075, .010, z], [.095, .035, z], [.098, .060, z]];
-    for (let j = 0; j < 3; j++) {
-      rod(hand, points[j], points[j + 1], .011, materials.armor);
-      rod(hand, points[j].map((v,k) => v + (k === 1 ? .009 : 0)), points[j + 1].map((v,k) => v + (k === 1 ? .009 : 0)), .0055, materials.grip);
-    }
-    for (const point of points.slice(1, -1)) sphere(hand, .012, point, materials.dark);
+  wrist.add(hand);
+  cylinder(elbow, .052, .065, [0, -.285, 0], materials.armor);
+  sphere(wrist, .045, [0, 0, 0], materials.dark);
+  const heel = centre.clone().addScaledVector(along, -.040).addScaledVector(normal, -.014)
+    .sub(elbowPosition).applyQuaternion(inverse).sub(wristPosition);
+  rod(wrist, [0, 0, 0], heel.toArray(), .034, materials.armor);
+  sphere(wrist, .034, heel.toArray(), materials.armor);
+  box(hand, [.083, .035, .096], [0, 0, 0], materials.dark, .013);
+  box(hand, [.070, .007, .082], [0, .021, 0], materials.grip, .003);
+  box(hand, [.070, .014, .080], [0, -.024, 0], materials.armor, .006);
+  box(hand, [.021, .003, .015], [-.022, -.033, 0], materials.teal, .001);
+  for (let i = 0; i < 3; i++) box(hand, [.003, .0015, .060], [-.018 + i * .018, .0255, 0], materials.dark, .0005);
+  function digit(points, radius, name) {
+    const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+    const object = mesh(hand, new THREE.TubeGeometry(curve, 16, radius, 12, false), materials.armor);
+    object.name = name;
+    sphere(hand, radius, points.at(-1), materials.armor);
   }
-  const thumb = [[-.025, 0, -side * .050], [-.008, .020, -side * .072], [.017, .047, -side * .063]];
-  for (let j = 0; j < 2; j++) rod(hand, thumb[j], thumb[j + 1], .014, materials.armor);
-  sphere(hand, .013, thumb[2], materials.grip);
+  for (let f = 0; f < 4; f++) {
+    const z = (f - 1.5) * .021;
+    digit([[.036, 0, z], [.060, .003, z], [.077, .014, z], [.082, .030, z]], .0105, `Compact finger ${suffix} ${f + 1}`);
+    sphere(hand, .012, [.078, .029, z], materials.grip, [.65, .35, .68]);
+  }
+  digit([[-.024, 0, -side * .045], [-.006, .009, -side * .063], [.015, .023, -side * .057]], .0135, `Compact opposed thumb ${suffix}`);
   const marker = new THREE.Group(); marker.name = `palm_normal_${suffix}`; marker.position.y = .1; hand.add(marker);
 }
 

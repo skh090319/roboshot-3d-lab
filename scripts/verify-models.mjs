@@ -50,21 +50,37 @@ for (let repeat = 0; repeat < 2; repeat++) {
 assert.ok(report.models.robot.bounds.max[1] > 1.8 && report.models.robot.bounds.max[1] < 2.1);
 assert.ok(report.models.court.bounds.max[1] < .1, 'Court lies in the XZ floor plane');
 sample(0); robot.scene.updateMatrixWorld(true);
-const palmChecks = [];
+const wristChecks = [];
 const heldBall = new THREE.Vector3(.43, 2, 0); // Robot origin is placed at X=-0.43 in the web scene.
 for (const side of ['left', 'right']) {
   const palm = robot.scene.getObjectByName(`palm_${side}`);
   const marker = robot.scene.getObjectByName(`palm_normal_${side}`);
-  assert.ok(palm && marker, 'Palm frame and grip-normal marker are exported');
+  const wrist = robot.scene.getObjectByName(`wrist_roll_${side}`);
+  assert.ok(palm && marker && wrist, 'Hand, normal marker and explicit wrist roll pivot are exported');
+  const expectedRoll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, -1, 0), Math.PI);
+  assert.ok(wrist.quaternion.angleTo(expectedRoll) < 1e-5, 'Wrist has the requested exact180degree rotation around the forearm length axis');
+  assert.ok(wrist.position.distanceTo(new THREE.Vector3(0, -.29, 0)) < 1e-6, 'Wrist rotation uses the existing forearm-end pivot');
+  const unrolledMatrix = wrist.parent.matrixWorld.clone()
+    .multiply(new THREE.Matrix4().makeTranslation(...wrist.position.toArray())).multiply(palm.matrix);
+  const unrolledCentre = new THREE.Vector3().setFromMatrixPosition(unrolledMatrix);
+  const previousCentre = new THREE.Vector3(.395, 1.90, side === 'left' ? -.095 : .095);
+  assert.ok(unrolledCentre.distanceTo(previousCentre) < 1e-5, 'Child palm placement has not counteracted the requested wrist rotation');
+  const unrolledNormal = new THREE.Vector3(0, 1, 0).transformDirection(unrolledMatrix);
+  assert.ok(unrolledNormal.dot(heldBall.clone().sub(previousCentre).normalize()) > .999, 'Original pre-roll palm frame is preserved under the wrist pivot');
+  const originalQuaternion = new THREE.Quaternion().setFromRotationMatrix(unrolledMatrix);
+  const actualQuaternion = palm.getWorldQuaternion(new THREE.Quaternion());
+  const actualRotationDegrees = THREE.MathUtils.radToDeg(originalQuaternion.angleTo(actualQuaternion));
+  assert.ok(Math.abs(actualRotationDegrees - 180) < .001, 'Visible hand orientation actually changed180degrees without cancellation');
   const position = palm.getWorldPosition(new THREE.Vector3());
   const normal = marker.getWorldPosition(new THREE.Vector3()).sub(position).normalize();
   const toBall = heldBall.clone().sub(position).normalize();
   const dot = normal.dot(toBall);
-  assert.ok(dot > .99, 'Palmar grip surface faces the ball, never the back of the hand');
+  // Report the real post-roll direction. A forced dot=1 would silently undo the
+  // user's explicit180degree wrist rotation, so it is no longer a requirement.
   assert.ok(position.y < heldBall.y && heldBall.y - position.y < .13, 'Palm supports the ball from below');
-  palmChecks.push({ side, centreInRobot: position.toArray(), normalTowardBall: normal.toArray(), dotToBall: dot });
+  wristChecks.push({ side, requestedRollDegrees: 180, actualRotationDegrees, axis: 'forearm local -Y', pivot: wrist.position.toArray(), uncompensated: true, centreInRobot: position.toArray(), actualPalmNormal: normal.toArray(), dotToBallAfterRoll: dot });
 }
-report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, palmChecks, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };
+report.validation = { rimCentre: centre.toArray(), rimInnerRadius: minRadius, rimOuterRadius: maxRadius, robotAnimationRadiansChanged: before.angleTo(after), animationResetReplayPasses: 2, wristChecks, axes: 'X forward, Y up; one Blender metre equals one Three.js unit' };
 await writeFile(new URL('../public/models/model-validation.json', import.meta.url), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
 console.log('PASS: Blender origin, metres, Y-up conversion, regulation rim and exported joint animation.');

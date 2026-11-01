@@ -2,7 +2,7 @@
   "verifiedWith": "Three.js GLTFLoader",
   "models": {
     "robot": {
-      "bytes": 963444,
+      "bytes": 954796,
       "bounds": {
         "min": [
           -0.24949999852105975,
@@ -10,8 +10,8 @@
           -0.43070733628090163
         ],
         "max": [
-          0.5150106602627982,
-          1.9655999619007112,
+          0.4455568277326113,
+          1.9698825909788962,
           0.43070733628090163
         ]
       },
@@ -63,34 +63,52 @@
     "rimOuterRadius": 0.25000000862794974,
     "robotAnimationRadiansChanged": 0.24999942789924784,
     "animationResetReplayPasses": 2,
-    "palmChecks": [
+    "wristChecks": [
       {
         "side": "left",
+        "requestedRollDegrees": 180,
+        "actualRotationDegrees": 179.99999485501834,
+        "axis": "forearm local -Y",
+        "pivot": [
+          0,
+          -0.2899998426437378,
+          0
+        ],
+        "uncompensated": true,
         "centreInRobot": [
-          0.3949999101926932,
-          1.899999740556582,
-          -0.09500011564501096
+          0.36081672621464245,
+          1.926087667961397,
+          -0.1441914636627709
         ],
-        "normalTowardBall": [
-          0.2459550151675266,
-          0.7027284704564782,
-          0.6675918119059283
+        "actualPalmNormal": [
+          0.017335282592460255,
+          0.9985131301860527,
+          0.051681880997994915
         ],
-        "dotToBall": 0.9999999999998751
+        "dotToBallAfterRoll": 0.46800041019318195
       },
       {
         "side": "right",
+        "requestedRollDegrees": 180,
+        "actualRotationDegrees": 179.99999532513837,
+        "axis": "forearm local -Y",
+        "pivot": [
+          0,
+          -0.2899998426437378,
+          0
+        ],
+        "uncompensated": true,
         "centreInRobot": [
-          0.3949999101926932,
-          1.899999740556582,
-          0.09500011564501096
+          0.3608166719803877,
+          1.9260876805400833,
+          0.1441914349097156
         ],
-        "normalTowardBall": [
-          0.2459550151675266,
-          0.7027284704564782,
-          -0.6675918119059283
+        "actualPalmNormal": [
+          0.01733522716281409,
+          0.9985131301014897,
+          -0.05168190122411271
         ],
-        "dotToBall": 0.9999999999998751
+        "dotToBallAfterRoll": 0.4680003505130142
       }
     ],
     "axes": "X forward, Y up; one Blender metre equals one Three.js unit"

@@ -7,8 +7,8 @@
   },
   "models": {
     "robot": {
-      "bytes": 963444,
-      "meshes": 138,
+      "bytes": 954796,
+      "meshes": 114,
       "path": "robot.glb"
     },
     "court": {
@@ -34,7 +34,7 @@
     "robotForward": "+X optical visor",
     "animation": "Four quaternion shoulder/elbow channels authored in Blender, 1.5 seconds",
     "readyPose": "Forward upper arms,77.35degree positive elbow flexion, upright forearms; no backward elbow bend",
-    "hands": "Cupped palms face the ball with textured inner grip pads; dorsal armor faces away. Palm normal markers retained for verification."
+    "hands": "User requested exactly180degree forearm-axis wrist roll; applied without compensating palm rotation. Compact continuous fingers, rounded closed tips, integrated wrist cuff."
   },
   "blendFile": "assets/RoboShot-3D-Lab.blend"
 }
